@@ -88,30 +88,30 @@ $ python tasks.py runserver # Starts the tasks management server"""
 
         self.current_items[priority] = task
         self.write_current()
-        print(f'Added task: "{task}" with priority {priority}')
+        return f'Added task: "{task}" with priority {priority}'
 
     def done(self, args):
         args[0] = int(args[0])
         if args[0] in self.current_items:
             self.completed_items.append(self.current_items[args[0]])
             self.current_items.pop(args[0])
-            print("Marked item as done.")
             self.write_current()
             # Removing "\n" from all completed_items
             for i in range(len(self.completed_items)):
                 self.completed_items[i] = self.completed_items[i].rstrip("\n")
             self.write_completed()
+            return "Marked item as done."
         else:
-            print(f"Error: no incomplete item with priority {args[0]} exists.")
+            return f"Error: no incomplete item with priority {args[0]} exists."
 
     def delete(self, args):
         args[0] = int(args[0])
         if args[0] in self.current_items:
             self.current_items.pop(args[0])
             self.write_current()
-            print(f"Deleted item with priority {args[0]}")
+            return f"Deleted item with priority {args[0]}"
         else:
-            print(
+            return (
                 f"Error: item with priority {args[0]} does not exist. Nothing deleted."
             )
 
@@ -271,16 +271,19 @@ class TasksServer(TasksCommand, BaseHTTPRequestHandler):
         body = parse_qs(self.rfile.read(content_length).decode("utf-8"))
 
         if self.path == "/add_task":
-            task_command_object.add([body["priority"][0], body["task"][0]])
-            response_content = f'<h3>Added task: {body["task"]} with priority {body["priority"][0]}</h3>'
-        elif self.path == "/delete_task":
-            task_command_object.delete([body["priority"][0]])
             response_content = (
-                f'<h3>Deleted item with priority {body["priority"][0]}</h3>'
+                "<h3>"
+                + task_command_object.add([body["priority"][0], body["task"][0]])
+                + "</h3>"
+            )
+        elif self.path == "/delete_task":
+            response_content = (
+                "<h3>" + task_command_object.delete([body["priority"][0]]) + "</h3>"
             )
         elif self.path == "/complete_task":
-            task_command_object.done([body["priority"][0]])
-            response_content = f"<h3>Marked item as done.</h3>"
+            response_content = (
+                "<h3>" + task_command_object.done([body["priority"][0]]) + "</h3>"
+            )
 
         self.send_response(200)
         self.send_header("content-type", "text/html")
