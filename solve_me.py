@@ -191,59 +191,9 @@ $ python tasks.py runserver # Starts the tasks management server"""
     # Endpoint: /manage
     # Renders the page to manage tasks i.e. add, delete or complete tasks
     def render_manage_tasks(self):
-        add_task_html = """       
-            <div>
-                <div class="form-container">
-                    <div>
-                        <h1 class="heading">Add New Task</h1>
-                        <form action="/add_task" method="POST" class="form" id="add-form">
-                            <label for="priority"> Priority: </label>
-                            <input type="text" name="priority" /><br />
-                            <label for="task"> Task: </label>
-                            <input type="text" name="task" /><br />
-                            <input type="submit" value="Submit" />
-                        </form>
-                    </div>
-                    <div>
-                        <h1 class="heading">Delete Task</h1>
-                        <form action="/delete_task" method="POST" class="form" id="del-form">
-                            <label for="priority"> Priority: </label>
-                            <input type="text" name="priority" /><br />
-                            <input type="submit" value="Submit" />
-                        </form>
-                    </div>
-                    <div>
-                        <h1 class="heading">Complete Task</h1>
-                        <form
-                            action="/complete_task"
-                            method="POST"
-                            class="form"
-                            id="done-form"
-                        >
-                            <label for="priority"> Priority: </label>
-                            <input type="text" name="priority" /><br />
-                            <input type="submit" value="Submit" />
-                        </form>
-                    </div>
-                </div>
-
-                <style>
-                    .form {
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                    }
-                    .heading {
-                        text-align: center;
-                    }
-                    .form-container {
-                        display: flex;
-                        justify-content: space-around;
-                    }
-                </style>
-            </div>
-        """
-        return add_task_html
+        with open("manage.html", "r", encoding="utf-8") as f:
+            manage_html = f.read()
+            return manage_html
 
 
 class TasksServer(TasksCommand, BaseHTTPRequestHandler):
