@@ -1,4 +1,5 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import parse_qs
 
 
 class TasksCommand:
@@ -96,6 +97,9 @@ $ python tasks.py runserver # Starts the tasks management server"""
             self.current_items.pop(args[0])
             print("Marked item as done.")
             self.write_current()
+            # Removing "\n" from all completed_items
+            for i in range(len(self.completed_items)):
+                self.completed_items[i] = self.completed_items[i].rstrip("\n")
             self.write_completed()
         else:
             print(f"Error: no incomplete item with priority {args[0]} exists.")
@@ -123,6 +127,8 @@ $ python tasks.py runserver # Starts the tasks management server"""
         for idx, task in enumerate(self.completed_items):
             print(f"{idx + 1}. {task}")
 
+    # Endpoint: /tasks
+    # Renders the pending tasks as a table
     def render_pending_tasks(self):
         pending_tasks_html = f"""
         <div style="display: flex; flex-direction: column; align-items: center">
@@ -140,6 +146,8 @@ $ python tasks.py runserver # Starts the tasks management server"""
         """
         return pending_tasks_html
 
+    # Endpoint: /completed
+    # Renders the completed tasks as a table
     def render_completed_tasks(self):
         completed_tasks_html = f"""
         <div style="display: flex; flex-direction: column; align-items: center">
@@ -156,7 +164,9 @@ $ python tasks.py runserver # Starts the tasks management server"""
         """
         return completed_tasks_html
 
+    # Helper function to return the rows of the 'pending tasks' and 'completed tasks' tables
     def generate_table_rows_html(self, task_type):
+        self.current_items.clear()
         self.read_current()
         self.read_completed()
         html = ""
@@ -178,6 +188,63 @@ $ python tasks.py runserver # Starts the tasks management server"""
                         """
         return html
 
+    # Endpoint: /manage
+    # Renders the page to manage tasks i.e. add, delete or complete tasks
+    def render_manage_tasks(self):
+        add_task_html = """       
+            <div>
+                <div class="form-container">
+                    <div>
+                        <h1 class="heading">Add New Task</h1>
+                        <form action="/add_task" method="POST" class="form" id="add-form">
+                            <label for="priority"> Priority: </label>
+                            <input type="text" name="priority" /><br />
+                            <label for="task"> Task: </label>
+                            <input type="text" name="task" /><br />
+                            <input type="submit" value="Submit" />
+                        </form>
+                    </div>
+                    <div>
+                        <h1 class="heading">Delete Task</h1>
+                        <form action="/delete_task" method="POST" class="form" id="del-form">
+                            <label for="priority"> Priority: </label>
+                            <input type="text" name="priority" /><br />
+                            <input type="submit" value="Submit" />
+                        </form>
+                    </div>
+                    <div>
+                        <h1 class="heading">Complete Task</h1>
+                        <form
+                            action="/complete_task"
+                            method="POST"
+                            class="form"
+                            id="done-form"
+                        >
+                            <label for="priority"> Priority: </label>
+                            <input type="text" name="priority" /><br />
+                            <input type="submit" value="Submit" />
+                        </form>
+                    </div>
+                </div>
+
+                <style>
+                    .form {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                    }
+                    .heading {
+                        text-align: center;
+                    }
+                    .form-container {
+                        display: flex;
+                        justify-content: space-around;
+                    }
+                </style>
+            </div>
+        """
+        return add_task_html
+
 
 class TasksServer(TasksCommand, BaseHTTPRequestHandler):
     def do_GET(self):
@@ -186,6 +253,8 @@ class TasksServer(TasksCommand, BaseHTTPRequestHandler):
             content = task_command_object.render_pending_tasks()
         elif self.path == "/completed":
             content = task_command_object.render_completed_tasks()
+        elif self.path == "/manage":
+            content = task_command_object.render_manage_tasks()
         else:
             self.send_response(404)
             self.end_headers()
@@ -194,3 +263,26 @@ class TasksServer(TasksCommand, BaseHTTPRequestHandler):
         self.send_header("content-type", "text/html")
         self.end_headers()
         self.wfile.write(content.encode())
+
+    def do_POST(self):
+        task_command_object = TasksCommand()
+
+        content_length = int(self.headers["Content-Length"])
+        body = parse_qs(self.rfile.read(content_length).decode("utf-8"))
+
+        if self.path == "/add_task":
+            task_command_object.add([body["priority"][0], body["task"][0]])
+            response_content = f'<h3>Added task: {body["task"]} with priority {body["priority"][0]}</h3>'
+        elif self.path == "/delete_task":
+            task_command_object.delete([body["priority"][0]])
+            response_content = (
+                f'<h3>Deleted item with priority {body["priority"][0]}</h3>'
+            )
+        elif self.path == "/complete_task":
+            task_command_object.done([body["priority"][0]])
+            response_content = f"<h3>Marked item as done.</h3>"
+
+        self.send_response(200)
+        self.send_header("content-type", "text/html")
+        self.end_headers()
+        self.wfile.write(response_content.encode())
